@@ -38,28 +38,43 @@
         .custom-scroll::-webkit-scrollbar-track { background: transparent; }
         .custom-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
 
-        /* --- CORREÇÃO DE IMPRESSÃO (Evita cortes de texto) --- */
+        /* --- CORREÇÃO DE IMPRESSÃO (Remove símbolos de extensões e cortes) --- */
         @media print {
             @page { 
                 size: A4; 
                 margin: 0; 
             }
-            body { 
-                background: white !important; 
-                overflow: visible !important;
-                height: auto !important;
+            
+            /* Esconde TUDO, exceto o portal de impressão */
+            body * { 
+                visibility: hidden !important; 
             }
-            .print-hidden, #ui-wrapper, aside, header { 
-                display: none !important; 
+            
+            #print-portal, #print-portal * { 
+                visibility: visible !important; 
             }
+
             #print-portal { 
                 display: block !important; 
-                position: relative !important; 
+                position: absolute !important; 
+                top: 0 !important; 
+                left: 0 !important; 
                 width: 210mm !important; 
-                visibility: visible !important;
                 background: white !important;
             }
-            /* Removido o height fixo que causava a exclusão da segunda página */
+
+            /* Esconde especificamente ícones de extensões (Grammarly, etc) */
+            div[class*="grammarly"], 
+            div[class*="assistant"],
+            grammarly-extension,
+            [data-grammarly-part],
+            div[style*="z-index: 2147483647"],
+            .no-print { 
+                display: none !important; 
+                visibility: hidden !important;
+                opacity: 0 !important;
+            }
+
             .page-break { 
                 page-break-after: always !important; 
                 break-after: page !important;
@@ -73,13 +88,8 @@
                 position: relative !important;
                 overflow: visible !important;
             }
-            p { 
-                orphans: 3; 
-                widows: 3; 
-            }
         }
         
-        /* Estilo da página no modo de visualização web */
         .abnt-page-view {
             width: 21cm;
             min-height: 29.7cm;
@@ -283,7 +293,7 @@
                 setTimeout(() => { window.print(); }, 500);
             };
 
-            if (authStatus === 'loading') return <div className="h-screen flex items-center justify-center bg-slate-900 text-white font-black uppercase tracking-widest animate-pulse">Lex ABNT v8 - Resolvendo Paginação...</div>;
+            if (authStatus === 'loading') return <div className="h-screen flex items-center justify-center bg-slate-900 text-white font-black uppercase tracking-widest animate-pulse">Lex ABNT v8 - Limpando PDF...</div>;
 
             return (
                 <div>
@@ -295,7 +305,7 @@
                         <aside className="w-80 bg-slate-900 text-white flex flex-col shadow-2xl z-30">
                             <div className="p-6 bg-slate-950 border-b border-slate-800 flex items-center gap-3">
                                 <div className="bg-blue-600 p-2 rounded-xl"><i data-lucide="layout" className="w-5 h-5"></i></div>
-                                <div><h1 className="font-black italic uppercase tracking-tighter text-lg leading-none">Lex ABNT</h1><p className="text-[8px] text-slate-500 font-bold uppercase mt-1">Sincronização Infinita</p></div>
+                                <div><h1 className="font-black italic uppercase tracking-tighter text-lg leading-none">Lex ABNT</h1><p className="text-[8px] text-slate-500 font-bold uppercase mt-1">Exportação Limpa</p></div>
                             </div>
                             
                             <div className="flex-1 overflow-y-auto custom-scroll flex flex-col">
@@ -342,7 +352,7 @@
                                         {syncStatus === 'syncing' ? <i data-lucide="rotate-cw" className="w-3 h-3 animate-spin"></i> : <i data-lucide="check-circle" className="w-3 h-3"></i>}
                                         <span>{syncStatus === 'syncing' ? 'GUARDANDO...' : 'SINCRONIZADO'}</span>
                                     </div>
-                                    <button onClick={() => handleExport(false)} className="bg-slate-800 text-white px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-black flex items-center gap-2 shadow-md"><i data-lucide="printer" className="w-4 h-4"></i> SEÇÃO</button>
+                                    <button onClick={() => handleExport(false)} className="bg-slate-800 text-white px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-black transition-all flex items-center gap-2 shadow-md"><i data-lucide="printer" className="w-4 h-4"></i> SEÇÃO</button>
                                     <button onClick={() => handleExport(true)} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-blue-700 shadow-lg flex items-center gap-2 border border-blue-500 active:scale-95"><i data-lucide="file-text" className="w-4 h-4"></i> PDF COMPLETO</button>
                                 </div>
                             </header>
