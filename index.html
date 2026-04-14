@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lex ABNT - Alisson Edition Pro v9</title>
+    <title>Lex ABNT - Alisson Pro Edition v10</title>
     
-    <!-- Bibliotecas Necessárias -->
+    <!-- Bibliotecas via CDN -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -33,65 +33,90 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
         
-        body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; background-color: #e2e8f0; }
+        body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; background-color: #f1f5f9; }
         .custom-scroll::-webkit-scrollbar { width: 6px; }
         .custom-scroll::-webkit-scrollbar-track { background: transparent; }
         .custom-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
 
-        /* --- CONFIGURAÇÃO DE IMPRESSÃO ABNT --- */
+        /* --- CONFIGURAÇÃO DE IMPRESSÃO INFALÍVEL --- */
         @media print {
             @page { 
                 size: A4; 
                 margin: 0; 
             }
-            body { 
+            
+            /* Esconder absolutamente tudo o que é UI */
+            html, body { 
                 background: white !important; 
+                height: auto !important;
                 overflow: visible !important;
             }
-            .print-hidden, aside, header, #ui-root { 
+            
+            #root { 
                 display: none !important; 
             }
-            #print-portal { 
+
+            #print-container { 
                 display: block !important; 
-                visibility: visible !important;
+                width: 210mm !important;
+                margin: 0 !important;
+                padding: 0 !important;
                 background: white !important;
             }
-            .abnt-page { 
-                page-break-after: always !important; 
-                break-after: page !important;
+
+            .abnt-page-print { 
                 display: block !important;
                 width: 210mm !important;
-                height: 297mm !important;
+                min-height: 297mm !important;
+                height: auto !important;
                 padding: 3cm 2cm 2cm 3cm !important;
                 box-sizing: border-box !important;
                 background: white !important;
                 position: relative !important;
+                page-break-after: always !important;
+                break-after: page !important;
                 color: black !important;
             }
-            /* Remove ícones de extensões e assistentes */
+
+            /* Eliminar interferências de extensões */
             div[class*="grammarly"], grammarly-extension, [data-grammarly-part], 
-            div[style*="z-index: 2147483647"], .no-print { 
+            div[style*="z-index: 2147483647"], .no-print, [class*="assistant"] { 
                 display: none !important; 
                 opacity: 0 !important;
             }
         }
         
-        /* Visualização na Web */
-        .abnt-page-web {
+        /* Estilo da folha no ecrã */
+        .abnt-page-screen {
             width: 21cm;
             min-height: 29.7cm;
             padding: 3cm 2cm 2cm 3cm;
             background: white;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
             margin: 20px auto;
             position: relative;
             box-sizing: border-box;
             color: black;
             overflow: hidden;
         }
+
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.9);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
     </style>
 </head>
 <body>
+    <!-- Contentor para o PDF (Fora do root do React para evitar conflitos de renderização) -->
+    <div id="print-container" style="display: none;"></div>
+    
     <div id="root"></div>
 
     <script type="text/babel">
@@ -100,12 +125,12 @@
         const MANDATORY_SECTIONS = [
             { title: 'Capa', content: 'UNIVERSIDADE FEDERAL DO RIO DE JANEIRO\nCENTRO DE CIÊNCIAS JURÍDICAS E ECONÔMICAS\nFACULDADE DE DIREITO\n\n\nALISSON CAMBUI DA SILVA\n\n\nINIMPUTABILIDADE PENAL: OS ASPECTOS LEGAIS RELATIVOS AO ACUSADO PORTADOR DE SOFRIMENTO PSÍQUICO\n\n\nRio de Janeiro\n2026', type: 'cover', order: 0 },
             { title: 'Folha de Rosto', content: 'ALISSON CAMBUI DA SILVA\n\n\nINIMPUTABILIDADE PENAL: OS ASPECTOS LEGAIS RELATIVOS AO ACUSADO PORTADOR DE SOFRIMENTO PSÍQUICO\n\n\nMonografia de final de curso apresentada à Faculdade de Direito da UFRJ.\n\nRio de Janeiro\n2026', type: 'title_page', order: 1 },
-            { title: 'Resumo', content: 'Resumo aqui...', type: 'pre-textual', order: 2 },
+            { title: 'Resumo', content: 'Escreva aqui o seu resumo...', type: 'pre-textual', order: 2 },
             { title: 'Sumário', content: 'INTRODUÇÃO\n1. DESENVOLVIMENTO\nCONCLUSÃO\nREFERÊNCIAS', type: 'pre-textual', order: 3 },
-            { title: 'Introdução', content: 'O presente trabalho analisa...', type: 'textual', order: 4 },
-            { title: 'Desenvolvimento', content: 'Inicie o seu desenvolvimento. Este sistema irá calcular automaticamente se o texto ultrapassa uma folha e ajustará a numeração das próximas páginas.', type: 'textual', order: 5 },
-            { title: 'Conclusão', content: 'Em conclusão...', type: 'textual', order: 6 },
-            { title: 'Referências Bibliográficas', content: 'AMARANTE, Paulo. Loucos pela Vida. Rio de Janeiro: Fiocruz, 2013.', type: 'references', order: 7 },
+            { title: 'Introdução', content: 'O presente trabalho...', type: 'textual', order: 4 },
+            { title: 'Desenvolvimento', content: 'Inicie o seu desenvolvimento. O sistema calculará agora a quebra de página de forma precisa.', type: 'textual', order: 5 },
+            { title: 'Conclusão', content: 'Portanto...', type: 'textual', order: 6 },
+            { title: 'Referências Bibliográficas', content: 'SOBRENOME, Nome. Título. Cidade: Editora, Ano.', type: 'references', order: 7 },
         ];
 
         function App() {
@@ -117,8 +142,8 @@
             const [localText, setLocalText] = useState('');
             const [viewMode, setViewMode] = useState('edit');
             const [syncStatus, setSyncStatus] = useState('synced');
-            const [isExportingAll, setIsExportingAll] = useState(false);
             const [fontFamily, setFontFamily] = useState('Arial');
+            const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
             const isTypingRef = useRef(false);
             const activeIdRef = useRef(null);
@@ -141,7 +166,7 @@
 
             useEffect(() => {
                 if (!user || !db) return;
-                const appId = 'abnt-ufrj-alisson-v9';
+                const appId = 'abnt-ufrj-alisson-v10';
                 const sectionsRef = window.FB.collection(db, 'artifacts', appId, 'public', 'data', 'sections');
 
                 const unsub = window.FB.onSnapshot(sectionsRef, (snap) => {
@@ -177,7 +202,7 @@
                 setSyncStatus('syncing');
                 const timer = setTimeout(async () => {
                     if (!activeSectionId) return;
-                    const sectionRef = window.FB.doc(db, 'artifacts', 'abnt-ufrj-alisson-v9', 'public', 'data', 'sections', activeSectionId);
+                    const sectionRef = window.FB.doc(db, 'artifacts', 'abnt-ufrj-alisson-v10', 'public', 'data', 'sections', activeSectionId);
                     await window.FB.updateDoc(sectionRef, { content: localText, updatedAt: Date.now() });
                     setSyncStatus('synced');
                     isTypingRef.current = false;
@@ -185,128 +210,157 @@
                 return () => clearTimeout(timer);
             }, [localText]);
 
-            // MOTOR DE PAGINAÇÃO: Calcula exatamente onde cada página começa
-            const getCalculatedPages = () => {
+            // MOTOR DE PAGINAÇÃO AVANÇADO
+            const getPages = () => {
                 let globalPageCounter = 0; 
-                let results = [];
+                let allPages = [];
                 const titlePageIndex = sections.findIndex(s => s.type === 'title_page');
 
                 sections.forEach((sec, idx) => {
                     const text = (sec.id === activeSectionId) ? localText : (sec.content || '');
-                    const lines = text.split('\n');
                     
-                    // Estimativa de quebra: aprox. 2800 caracteres por folha ou 35 linhas
-                    const charsPerPage = 2800;
-                    const pagesInSec = Math.max(1, Math.ceil(text.length / charsPerPage));
+                    // Aproximação ABNT: 2600 caracteres por folha (espaçamento 1.5)
+                    const charsPerPage = 2600;
+                    const pagesCount = Math.max(1, Math.ceil(text.length / charsPerPage));
                     
-                    // Contagem ABNT: Começa na Folha de Rosto (idx >= titlePageIndex)
-                    if (idx >= titlePageIndex) {
-                        globalPageCounter += 1; // Incrementa para a primeira página da secção
-                    }
+                    // Contagem começa na Folha de Rosto
+                    if (idx >= titlePageIndex) globalPageCounter++;
 
-                    const sectionInfo = {
-                        ...sec,
-                        startPage: globalPageCounter,
-                        numPages: pagesInSec,
-                        text: text,
-                        showNumber: sec.type === 'textual' || sec.type === 'references'
-                    };
+                    for (let p = 0; p < pagesCount; p++) {
+                        const block = text.substring(p * charsPerPage, (p + 1) * charsPerPage);
+                        allPages.push({
+                            id: `${sec.id}-${p}`,
+                            sectionId: sec.id,
+                            title: sec.title,
+                            type: sec.type,
+                            content: block,
+                            pageNumber: globalPageCounter + p,
+                            showNumber: (sec.type === 'textual' || sec.type === 'references'),
+                            isFirstOfSection: p === 0
+                        });
+                    }
                     
-                    results.push(sectionInfo);
-                    
-                    // Adiciona as páginas extras da mesma secção à contagem global
-                    if (pagesInSec > 1 && idx >= titlePageIndex) {
-                        globalPageCounter += (pagesInSec - 1);
+                    if (pagesCount > 1 && idx >= titlePageIndex) {
+                        globalPageCounter += (pagesCount - 1);
                     }
                 });
-                return results;
+                return allPages;
             };
 
-            const paginatedData = getCalculatedPages();
-            const currentPaginated = paginatedData.find(p => p.id === activeSectionId);
+            const allPagesData = getPages();
 
-            // Renderiza o conteúdo respeitando quebras de página reais
-            const PageRenderer = ({ item, isPrint = false }) => {
-                const lines = item.text.split('\n');
-                const charsPerPage = 2800;
+            // FUNÇÃO DE EXPORTAÇÃO CORRIGIDA
+            const handleExport = (exportAll = true) => {
+                setIsGeneratingPdf(true);
+                const printContainer = document.getElementById('print-container');
+                printContainer.innerHTML = ''; // Limpa anterior
                 
-                // Divide o texto em blocos de página
-                let pageBlocks = [];
-                for (let i = 0; i < item.numPages; i++) {
-                    pageBlocks.push(item.text.substring(i * charsPerPage, (i + 1) * charsPerPage));
-                }
+                const pagesToPrint = exportAll 
+                    ? allPagesData 
+                    : allPagesData.filter(p => p.sectionId === activeSectionId);
 
-                return (
-                    <React.Fragment>
-                        {pageBlocks.map((blockText, pIdx) => {
-                            const currentPageNumber = item.startPage + pIdx;
-                            const isFirstPageOfDoc = item.type === 'cover';
-                            
-                            return (
-                                <div key={`${item.id}-${pIdx}`} className={isPrint ? 'abnt-page' : 'abnt-page-web'} style={{ fontFamily: fontFamily === 'Arial' ? 'Arial' : 'Times New Roman' }}>
-                                    {/* Número da página (Sempre no canto superior direito se for textual) */}
-                                    {item.showNumber && currentPageNumber > 0 && (
-                                        <div className="absolute top-[2cm] right-[2cm] text-[10pt] font-normal no-print-helper">
-                                            {currentPageNumber}
-                                        </div>
-                                    )}
+                pagesToPrint.forEach(page => {
+                    const div = document.createElement('div');
+                    div.className = 'abnt-page-print';
+                    div.style.fontFamily = fontFamily === 'Arial' ? 'Arial' : 'Times New Roman';
+                    
+                    // Número da página
+                    if (page.showNumber) {
+                        const numDiv = document.createElement('div');
+                        numDiv.style.position = 'absolute';
+                        numDiv.style.top = '2cm';
+                        numDiv.style.right = '2cm';
+                        numDiv.style.fontSize = '10pt';
+                        numDiv.innerText = page.pageNumber;
+                        div.appendChild(numDiv);
+                    }
 
-                                    {/* Layout Especial para Capa e Folha de Rosto */}
-                                    {(item.type === 'cover' || item.type === 'title_page') && pIdx === 0 ? (
-                                        <div className="flex flex-col h-full text-center uppercase font-bold justify-between">
-                                            <div className="space-y-1">{lines.slice(0, 3).map((l, i) => <div key={i}>{l}</div>)}</div>
-                                            <div className="flex-1 flex flex-col justify-center gap-10">
-                                                {lines.slice(3, -2).map((l, i) => <div key={i} className={l.length > 40 ? "text-lg" : "text-xl"}>{l}</div>)}
-                                            </div>
-                                            <div className="space-y-1">{lines.slice(-2).map((l, i) => <div key={i}>{l}</div>)}</div>
-                                        </div>
-                                    ) : (
-                                        <div className="w-full">
-                                            {pIdx === 0 && <h2 className="text-center font-bold uppercase mb-12 text-[12pt]">{item.title}</h2>}
-                                            <div className="whitespace-pre-wrap text-justify leading-[1.5] text-[12pt]">
-                                                {blockText.split('\n').map((line, lIdx) => (
-                                                    <p key={lIdx} className="mb-4" style={{ textIndent: (item.type === 'references' || line.trim() === "") ? '0' : '1.25cm' }}>
-                                                        {line}
-                                                    </p>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </React.Fragment>
-                );
+                    // Título (Apenas na primeira página da secção)
+                    if (page.isFirstOfSection && page.type !== 'cover' && page.type !== 'title_page') {
+                        const h2 = document.createElement('h2');
+                        h2.style.textAlign = 'center';
+                        h2.style.fontWeight = 'bold';
+                        h2.style.textTransform = 'uppercase';
+                        h2.style.marginBottom = '1.5cm';
+                        h2.style.fontSize = '12pt';
+                        h2.innerText = page.title;
+                        div.appendChild(h2);
+                    }
+
+                    // Conteúdo
+                    const contentDiv = document.createElement('div');
+                    contentDiv.style.whiteSpace = 'pre-wrap';
+                    contentDiv.style.textAlign = 'justify';
+                    contentDiv.style.lineHeight = '1.5';
+                    contentDiv.style.fontSize = '12pt';
+
+                    // Lógica especial para Capa e Folha de Rosto
+                    if (page.type === 'cover' || page.type === 'title_page') {
+                        div.style.display = 'flex';
+                        div.style.flexDirection = 'column';
+                        div.style.justifyContent = 'space-between';
+                        div.style.textAlign = 'center';
+                        div.style.textTransform = 'uppercase';
+                        div.style.fontWeight = 'bold';
+                        
+                        const lines = page.content.split('\n');
+                        const header = lines.slice(0, 3).join('\n');
+                        const footer = lines.slice(-2).join('\n');
+                        const body = lines.slice(3, -2).join('\n');
+
+                        contentDiv.innerHTML = `
+                            <div style="margin-bottom: 2cm">${header}</div>
+                            <div style="flex: 1; display: flex; align-items: center; justify-content: center; font-size: 14pt; margin: 2cm 0">${body}</div>
+                            <div style="margin-top: auto">${footer}</div>
+                        `;
+                    } else {
+                        // Parágrafos com recuo
+                        const paras = page.content.split('\n').map(line => {
+                            if (line.trim() === '') return '<br/>';
+                            const indent = page.type === 'references' ? '0' : '1.25cm';
+                            return `<p style="text-indent: ${indent}; margin-bottom: 0.5cm">${line}</p>`;
+                        }).join('');
+                        contentDiv.innerHTML = paras;
+                    }
+
+                    div.appendChild(contentDiv);
+                    printContainer.appendChild(div);
+                });
+
+                // Dispara a impressão após pequena pausa para renderização do DOM real
+                setTimeout(() => {
+                    setIsGeneratingPdf(false);
+                    window.print();
+                }, 800);
             };
 
-            const handleExport = (all) => {
-                setIsExportingAll(all);
-                setTimeout(() => window.print(), 600);
-            };
-
-            if (authStatus === 'loading') return <div className="h-screen flex items-center justify-center bg-slate-900 text-white font-black animate-pulse">Sincronizando Paginação ABNT...</div>;
+            if (authStatus === 'loading') return <div className="h-screen flex items-center justify-center bg-slate-950 text-white font-black animate-pulse">Lex ABNT v10...</div>;
 
             return (
                 <div id="ui-root">
-                    {/* PORTAL DE PDF (Apenas para Impressão) */}
-                    <div id="print-portal" className="hidden">
-                        {isExportingAll ? paginatedData.map(p => <PageRenderer key={p.id} item={p} isPrint={true} />) : (currentPaginated && <PageRenderer item={currentPaginated} isPrint={true} />)}
-                    </div>
+                    {isGeneratingPdf && (
+                        <div className="loading-overlay">
+                            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                            <h2 className="font-black uppercase tracking-widest text-sm text-center">Preparando PDF ABNT...<br/><span className="text-[10px] text-slate-400 font-normal">Isso levará apenas um momento</span></h2>
+                        </div>
+                    )}
 
-                    {/* INTERFACE DO ALISSON */}
-                    <div className="flex h-screen overflow-hidden bg-slate-200 print-hidden">
+                    <div className="flex h-screen overflow-hidden print-hidden">
                         <aside className="w-80 bg-slate-900 text-white flex flex-col shadow-2xl z-30">
                             <div className="p-6 bg-slate-950 border-b border-slate-800 flex items-center gap-3">
-                                <div className="bg-blue-600 p-2 rounded-xl shadow-lg"><i data-lucide="book-marked" className="w-5 h-5"></i></div>
-                                <div><h1 className="font-black italic uppercase tracking-tighter text-lg leading-none">Lex ABNT</h1><p className="text-[8px] text-slate-500 font-bold uppercase mt-1">UFRJ Edition v9</p></div>
+                                <div className="bg-blue-600 p-2 rounded-xl shadow-lg"><i data-lucide="shield-check" className="w-5 h-5"></i></div>
+                                <div><h1 className="font-black italic uppercase tracking-tighter text-lg leading-none">Lex ABNT</h1><p className="text-[8px] text-slate-500 font-bold uppercase mt-1">Lawyer Edition v10</p></div>
                             </div>
                             <div className="flex-1 overflow-y-auto p-4 space-y-1 custom-scroll">
-                                {paginatedData.map(s => (
-                                    <button key={s.id} onClick={() => { setActiveSectionId(s.id); activeIdRef.current = s.id; isTypingRef.current = false; }} className={`w-full text-left p-4 rounded-2xl text-[11px] font-bold uppercase transition-all flex justify-between items-center group ${activeSectionId === s.id ? 'bg-blue-600 text-white shadow-xl translate-x-1' : 'hover:bg-slate-800 text-slate-400'}`}>
-                                        <span className="truncate">{s.title}</span>
-                                        {s.startPage > 0 && <span className={`text-[9px] px-2 py-0.5 rounded-full ${activeSectionId === s.id ? 'bg-blue-500 border border-white/20' : 'bg-slate-950'}`}>P.{s.startPage}</span>}
-                                    </button>
-                                ))}
+                                {sections.map(s => {
+                                    const pageInfo = allPagesData.find(p => p.sectionId === s.id && p.isFirstOfSection);
+                                    return (
+                                        <button key={s.id} onClick={() => { setActiveSectionId(s.id); activeIdRef.current = s.id; isTypingRef.current = false; }} className={`w-full text-left p-4 rounded-2xl text-[11px] font-bold uppercase transition-all flex justify-between items-center group ${activeSectionId === s.id ? 'bg-blue-600 text-white shadow-xl translate-x-1' : 'hover:bg-slate-800 text-slate-400'}`}>
+                                            <span className="truncate">{s.title}</span>
+                                            {pageInfo?.pageNumber > 0 && <span className={`text-[9px] px-2 py-0.5 rounded-full ${activeSectionId === s.id ? 'bg-blue-500 border border-white/20' : 'bg-slate-950'}`}>P.{pageInfo.pageNumber}</span>}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </aside>
 
@@ -317,9 +371,9 @@
                                     <button onClick={() => setViewMode('preview')} className={`px-6 py-2 rounded-lg text-[10px] font-black transition-all ${viewMode === 'preview' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}>VER FOLHAS</button>
                                 </div>
                                 <div className="flex items-center gap-4">
-                                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border ${syncStatus === 'syncing' ? 'bg-orange-50 text-orange-600 border-orange-200' : 'bg-green-50 text-green-600 border-green-200'} text-[9px] font-black`}>
+                                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border ${syncStatus === 'syncing' ? 'bg-orange-50 text-orange-600' : 'bg-green-50 text-green-600'} text-[9px] font-black`}>
                                         {syncStatus === 'syncing' ? <i data-lucide="refresh-cw" className="w-3 h-3 animate-spin"></i> : <i data-lucide="check" className="w-3 h-3"></i>}
-                                        <span>{syncStatus === 'syncing' ? 'SALVANDO...' : 'TRABALHO GUARDADO'}</span>
+                                        <span>{syncStatus === 'syncing' ? 'A SALVAR...' : 'SINCRONIZADO'}</span>
                                     </div>
                                     <button onClick={() => handleExport(false)} className="bg-slate-800 text-white px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase hover:bg-black transition-all flex items-center gap-2 shadow-md"><i data-lucide="printer" className="w-4 h-4"></i> SEÇÃO</button>
                                     <button onClick={() => handleExport(true)} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase hover:bg-blue-700 shadow-lg flex items-center gap-2 border border-blue-500 active:scale-95"><i data-lucide="file-check" className="w-4 h-4"></i> PDF COMPLETO</button>
@@ -332,7 +386,7 @@
                                         <div className="px-10 py-6 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
                                             <h2 className="text-[13px] font-black text-slate-800 uppercase tracking-tight">{activeSection?.title}</h2>
                                             <select value={fontFamily} onChange={e => setFontFamily(e.target.value)} className="text-[10px] font-black bg-white border border-slate-200 rounded-lg px-4 py-2 shadow-sm cursor-pointer">
-                                                <option value="Arial">ARIAL</option>
+                                                <option value="Arial">ARIAL (PADRÃO)</option>
                                                 <option value="Times">TIMES NEW ROMAN</option>
                                             </select>
                                         </div>
@@ -340,7 +394,19 @@
                                     </div>
                                 ) : (
                                     <div className="scale-90 origin-top pb-20">
-                                        {currentPaginated && <PageRenderer item={currentPaginated} isPrint={false} />}
+                                        {allPagesData.filter(p => p.sectionId === activeSectionId).map(p => (
+                                            <div key={p.id} className="abnt-page-screen" style={{ fontFamily: fontFamily === 'Arial' ? 'Arial' : 'Times New Roman' }}>
+                                                {p.showNumber && <div className="absolute top-[2cm] right-[2cm] font-normal text-sm">{p.pageNumber}</div>}
+                                                {p.isFirstOfSection && p.type !== 'cover' && p.type !== 'title_page' && <h2 className="text-center font-bold uppercase mb-12 text-[12pt]">{p.title}</h2>}
+                                                <div className="whitespace-pre-wrap text-justify leading-[1.5] text-[12pt]">
+                                                    {p.content.split('\n').map((line, lIdx) => (
+                                                        <p key={lIdx} className="mb-4" style={{ textIndent: (p.type === 'references' || line.trim() === "") ? '0' : '1.25cm' }}>
+                                                            {line}
+                                                        </p>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
                             </div>
