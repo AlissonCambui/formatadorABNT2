@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lex ABNT - Alisson Pro Edition v11</title>
+    <title>Lex ABNT - Alisson Pro Edition v12</title>
     
     <!-- Bibliotecas via CDN -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -40,54 +40,31 @@
 
         /* --- CONFIGURAÇÃO DE IMPRESSÃO INFALÍVEL --- */
         @media print {
-            @page { 
-                size: A4; 
-                margin: 0; 
-            }
-            
-            html, body { 
-                background: white !important; 
-                height: auto !important;
-                overflow: visible !important;
-            }
-            
-            #root { 
-                display: none !important; 
-            }
+            @page { size: A4; margin: 0; }
+            html, body { background: white !important; height: auto !important; overflow: visible !important; }
+            #root { display: none !important; }
+            #print-container { display: block !important; width: 210mm !important; margin: 0 !important; background: white !important; }
 
-            #print-container { 
-                display: block !important; 
-                width: 210mm !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                background: white !important;
-            }
-
-            /* Cada página física é forçada aqui */
             .abnt-page-print { 
-                display: block !important;
+                display: flex !important;
+                flex-direction: column;
                 width: 210mm !important;
-                height: 297mm !important; /* Altura fixa para garantir que o número fique no lugar certo */
+                height: 297mm !important;
                 padding: 3cm 2cm 2cm 3cm !important;
                 box-sizing: border-box !important;
                 background: white !important;
                 position: relative !important;
                 page-break-after: always !important;
                 break-after: page !important;
-                overflow: hidden !important; /* Impede que o texto "vaze" para uma página sem número */
                 color: black !important;
             }
 
-            div[class*="grammarly"], grammarly-extension, [data-grammarly-part], 
-            div[style*="z-index: 2147483647"], .no-print, [class*="assistant"] { 
-                display: none !important; 
-            }
+            .no-print { display: none !important; }
         }
         
-        /* Estilo da folha no ecrã */
         .abnt-page-screen {
             width: 21cm;
-            min-height: 29.7cm;
+            height: 29.7cm;
             padding: 3cm 2cm 2cm 3cm;
             background: white;
             box-shadow: 0 10px 40px rgba(0,0,0,0.1);
@@ -95,19 +72,8 @@
             position: relative;
             box-sizing: border-box;
             color: black;
-            overflow: hidden;
-        }
-
-        .loading-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(15, 23, 42, 0.95);
-            z-index: 9999;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: white;
         }
     </style>
 </head>
@@ -119,14 +85,14 @@
         const { useState, useEffect, useRef } = React;
 
         const MANDATORY_SECTIONS = [
-            { title: 'Capa', content: 'UNIVERSIDADE FEDERAL DO RIO DE JANEIRO\nCENTRO DE CIÊNCIAS JURÍDICAS E ECONÔMICAS\nFACULDADE DE DIREITO\n\n\nALISSON CAMBUI DA SILVA\n\n\nINIMPUTABILIDADE PENAL: OS ASPECTOS LEGAIS RELATIVOS AO ACUSADO PORTADOR DE SOFRIMENTO PSÍQUICO\n\n\nRio de Janeiro\n2026', type: 'cover', order: 0 },
-            { title: 'Folha de Rosto', content: 'ALISSON CAMBUI DA SILVA\n\n\nINIMPUTABILIDADE PENAL: OS ASPECTOS LEGAIS RELATIVOS AO ACUSADO PORTADOR DE SOFRIMENTO PSÍQUICO\n\n\nMonografia de final de curso apresentada à Faculdade de Direito da UFRJ.\n\nRio de Janeiro\n2026', type: 'title_page', order: 1 },
-            { title: 'Resumo', content: 'Escreva aqui o seu resumo...', type: 'pre-textual', order: 2 },
+            { title: 'Capa', content: 'UNIVERSIDADE FEDERAL DO RIO DE JANEIRO\nFACULDADE DE DIREITO\n\nALISSON CAMBUI DA SILVA\n\nINIMPUTABILIDADE PENAL: OS ASPECTOS LEGAIS RELATIVOS AO ACUSADO PORTADOR DE SOFRIMENTO PSÍQUICO\n\nRio de Janeiro\n2026', type: 'cover', order: 0 },
+            { title: 'Folha de Rosto', content: 'ALISSON CAMBUI DA SILVA\n\nINIMPUTABILIDADE PENAL: OS ASPECTOS LEGAIS RELATIVOS AO ACUSADO PORTADOR DE SOFRIMENTO PSÍQUICO\n\nMonografia apresentada à Faculdade de Direito da Universidade Federal do Rio de Janeiro como requisito para obtenção do grau de Bacharel em Direito.\n\nOrientador: Prof. Ms. Hamilton Gonçalves Ferraz\n\nRio de Janeiro\n2026', type: 'title_page', order: 1 },
+            { title: 'Resumo', content: 'Escreva o seu resumo aqui...', type: 'pre-textual', order: 2 },
             { title: 'Sumário', content: 'INTRODUÇÃO\n1. DESENVOLVIMENTO\nCONCLUSÃO\nREFERÊNCIAS', type: 'pre-textual', order: 3 },
-            { title: 'Introdução', content: 'O presente trabalho...', type: 'textual', order: 4 },
-            { title: 'Desenvolvimento', content: 'Inicie o seu desenvolvimento aqui. O sistema agora divide o texto em blocos menores para garantir que todas as páginas sejam numeradas corretamente conforme a norma NBR 14724.', type: 'textual', order: 5 },
-            { title: 'Conclusão', content: 'Portanto...', type: 'textual', order: 6 },
-            { title: 'Referências Bibliográficas', content: 'SOBRENOME, Nome. Título. Cidade: Editora, Ano.', type: 'references', order: 7 },
+            { title: 'Introdução', content: 'Texto inicial...', type: 'textual', order: 4 },
+            { title: 'Desenvolvimento', content: 'Texto longo...', type: 'textual', order: 5 },
+            { title: 'Conclusão', content: 'Conclusão...', type: 'textual', order: 6 },
+            { title: 'Referências Bibliográficas', content: 'AMARANTE, Paulo. Loucos pela Vida. Rio de Janeiro: Fiocruz, 2013.', type: 'references', order: 7 },
         ];
 
         function App() {
@@ -162,7 +128,7 @@
 
             useEffect(() => {
                 if (!user || !db) return;
-                const appId = 'abnt-ufrj-alisson-v11';
+                const appId = 'abnt-ufrj-alisson-v12';
                 const sectionsRef = window.FB.collection(db, 'artifacts', appId, 'public', 'data', 'sections');
 
                 const unsub = window.FB.onSnapshot(sectionsRef, (snap) => {
@@ -188,9 +154,7 @@
             const activeSection = sections.find(s => s.id === activeSectionId);
             
             useEffect(() => {
-                if (!isTypingRef.current && activeSection) {
-                    setLocalText(activeSection.content || '');
-                }
+                if (!isTypingRef.current && activeSection) setLocalText(activeSection.content || '');
             }, [activeSectionId, activeSection?.content]);
 
             useEffect(() => {
@@ -198,7 +162,7 @@
                 setSyncStatus('syncing');
                 const timer = setTimeout(async () => {
                     if (!activeSectionId) return;
-                    const sectionRef = window.FB.doc(db, 'artifacts', 'abnt-ufrj-alisson-v11', 'public', 'data', 'sections', activeSectionId);
+                    const sectionRef = window.FB.doc(db, 'artifacts', 'abnt-ufrj-alisson-v12', 'public', 'data', 'sections', activeSectionId);
                     await window.FB.updateDoc(sectionRef, { content: localText, updatedAt: Date.now() });
                     setSyncStatus('synced');
                     isTypingRef.current = false;
@@ -206,7 +170,6 @@
                 return () => clearTimeout(timer);
             }, [localText]);
 
-            // MOTOR DE PAGINAÇÃO V11: Split rigoroso para garantir numeração
             const getPages = () => {
                 let globalPageCounter = 0; 
                 let allPages = [];
@@ -215,30 +178,22 @@
                 sections.forEach((sec, idx) => {
                     const text = (sec.id === activeSectionId) ? localText : (sec.content || '');
                     
-                    // ABNT RIGOROSA: 2200 caracteres é o limite seguro para 1.5 de entrelinha em A4
-                    const charsPerPage = 2200; 
-                    const pagesCount = Math.max(1, Math.ceil(text.length / charsPerPage));
-                    
-                    // Contagem começa na Folha de Rosto (é a página 1, mas não mostra o número)
-                    if (idx >= titlePageIndex) globalPageCounter++;
-
-                    for (let p = 0; p < pagesCount; p++) {
-                        const block = text.substring(p * charsPerPage, (p + 1) * charsPerPage);
-                        allPages.push({
-                            id: `${sec.id}-${p}`,
-                            sectionId: sec.id,
-                            title: sec.title,
-                            type: sec.type,
-                            content: block,
-                            pageNumber: globalPageCounter,
-                            // Só mostra número a partir da Introdução (index 4 ou tipo textual)
-                            showNumber: (sec.type === 'textual' || sec.type === 'references'),
-                            isFirstOfSection: p === 0
-                        });
-                        
-                        // Incrementa o contador global para cada sub-página gerada
-                        if (p < pagesCount - 1 && idx >= titlePageIndex) {
-                            globalPageCounter++;
+                    if (sec.type === 'cover' || sec.type === 'title_page') {
+                        if (idx >= titlePageIndex) globalPageCounter++;
+                        allPages.push({ id: sec.id, sectionId: sec.id, type: sec.type, content: text, pageNumber: globalPageCounter, showNumber: false, isFirst: true, title: sec.title });
+                    } else {
+                        const charsPerPage = 2000; // Mais conservador para garantir numeração
+                        const pagesCount = Math.max(1, Math.ceil(text.length / charsPerPage));
+                        if (idx >= titlePageIndex) globalPageCounter++;
+                        for (let p = 0; p < pagesCount; p++) {
+                            allPages.push({
+                                id: `${sec.id}-${p}`, sectionId: sec.id, type: sec.type,
+                                content: text.substring(p * charsPerPage, (p + 1) * charsPerPage),
+                                pageNumber: globalPageCounter,
+                                showNumber: (sec.type === 'textual' || sec.type === 'references'),
+                                isFirst: p === 0, title: sec.title
+                            });
+                            if (p < pagesCount - 1 && idx >= titlePageIndex) globalPageCounter++;
                         }
                     }
                 });
@@ -247,111 +202,104 @@
 
             const allPagesData = getPages();
 
-            const handleExport = (exportAll = true) => {
-                setIsGeneratingPdf(true);
-                const printContainer = document.getElementById('print-container');
-                printContainer.innerHTML = ''; 
-                
-                const pagesToPrint = exportAll 
-                    ? allPagesData 
-                    : allPagesData.filter(p => p.sectionId === activeSectionId);
+            const PageRenderer = ({ page, isPrint = false }) => {
+                const lines = page.content.split('\n').filter(l => l.trim() !== "" || l === "");
+                const dynamicStyle = { fontFamily: fontFamily === 'Arial' ? 'Arial, sans-serif' : '"Times New Roman", serif', fontSize: '12pt', lineHeight: '1.5' };
 
-                pagesToPrint.forEach(page => {
-                    const div = document.createElement('div');
-                    div.className = 'abnt-page-print';
-                    div.style.fontFamily = fontFamily === 'Arial' ? 'Arial' : 'Times New Roman';
-                    
-                    // Número da página (Canto superior direito)
-                    if (page.showNumber) {
-                        const numDiv = document.createElement('div');
-                        numDiv.style.position = 'absolute';
-                        numDiv.style.top = '2cm';
-                        numDiv.style.right = '2cm';
-                        numDiv.style.fontSize = '10pt';
-                        numDiv.innerText = page.pageNumber;
-                        div.appendChild(numDiv);
-                    }
+                // Layout Académico Especial para Capa e Folha de Rosto
+                if (page.type === 'cover' || page.type === 'title_page') {
+                    const authorLine = lines.find(l => l.toUpperCase() === l && l.length > 3 && !l.includes('UNIVERSIDADE') && !l.includes('FACULDADE'));
+                    const titleLine = lines.find(l => l.length > 20);
+                    const locationLines = lines.slice(-2);
+                    const institutionLines = lines.filter(l => l.includes('UNIVERSIDADE') || l.includes('FACULDADE') || l.includes('CENTRO'));
+                    const descriptionLine = lines.find(l => l.length > 50 && !l.includes('UNIVERSIDADE') && l !== titleLine);
 
-                    // Título da Secção (Apenas no topo da primeira página daquela secção)
-                    if (page.isFirstOfSection && page.type !== 'cover' && page.type !== 'title_page') {
-                        const h2 = document.createElement('h2');
-                        h2.style.textAlign = 'center';
-                        h2.style.fontWeight = 'bold';
-                        h2.style.textTransform = 'uppercase';
-                        h2.style.marginBottom = '1.5cm';
-                        h2.style.fontSize = '12pt';
-                        h2.innerText = page.title;
-                        div.appendChild(h2);
-                    }
+                    return (
+                        <div className={isPrint ? 'abnt-page-print' : 'abnt-page-screen'} style={dynamicStyle}>
+                            <div className="flex flex-col h-full text-center uppercase font-bold justify-between py-2">
+                                {/* Topo: Instituição e Autor */}
+                                <div className="space-y-8">
+                                    <div className="space-y-1">{institutionLines.map((l, i) => <div key={i}>{l}</div>)}</div>
+                                    <div className="mt-12">{authorLine || lines[3]}</div>
+                                </div>
+                                
+                                {/* Centro: Título */}
+                                <div className="flex-1 flex flex-col justify-center">
+                                    <div className="text-xl px-4 break-words">{titleLine || "TÍTULO DO TRABALHO"}</div>
+                                    
+                                    {/* Natureza do Trabalho (Apenas Folha de Rosto) */}
+                                    {page.type === 'title_page' && descriptionLine && (
+                                        <div className="mt-8 text-left lowercase font-normal normal-case text-[10pt] leading-tight" style={{ marginLeft: '50%', textTransform: 'none' }}>
+                                            {descriptionLine}
+                                        </div>
+                                    )}
+                                </div>
 
-                    const contentDiv = document.createElement('div');
-                    contentDiv.style.whiteSpace = 'pre-wrap';
-                    contentDiv.style.textAlign = 'justify';
-                    contentDiv.style.lineHeight = '1.5';
-                    contentDiv.style.fontSize = '12pt';
+                                {/* Base: Local e Ano */}
+                                <div className="mt-auto space-y-1">
+                                    {locationLines.map((l, i) => <div key={i}>{l}</div>)}
+                                </div>
+                            </div>
+                        </div>
+                    );
+                }
 
-                    if (page.type === 'cover' || page.type === 'title_page') {
-                        div.style.display = 'flex';
-                        div.style.flexDirection = 'column';
-                        div.style.justifyContent = 'space-between';
-                        div.style.textAlign = 'center';
-                        div.style.textTransform = 'uppercase';
-                        div.style.fontWeight = 'bold';
-                        
-                        const lines = page.content.split('\n');
-                        const header = lines.slice(0, 3).join('\n');
-                        const footer = lines.slice(-2).join('\n');
-                        const body = lines.slice(3, -2).join('\n');
-
-                        contentDiv.innerHTML = `
-                            <div style="margin-bottom: 2cm">${header}</div>
-                            <div style="flex: 1; display: flex; align-items: center; justify-content: center; font-size: 14pt;">${body}</div>
-                            <div style="margin-top: auto">${footer}</div>
-                        `;
-                    } else {
-                        const paras = page.content.split('\n').map(line => {
-                            if (line.trim() === '') return '<br/>';
-                            const indent = page.type === 'references' ? '0' : '1.25cm';
-                            return `<p style="text-indent: ${indent}; margin-bottom: 0.4cm">${line}</p>`;
-                        }).join('');
-                        contentDiv.innerHTML = paras;
-                    }
-
-                    div.appendChild(contentDiv);
-                    printContainer.appendChild(div);
-                });
-
-                setTimeout(() => {
-                    setIsGeneratingPdf(false);
-                    window.print();
-                }, 1000);
+                return (
+                    <div className={isPrint ? 'abnt-page-print' : 'abnt-page-screen'} style={dynamicStyle}>
+                        {page.showNumber && <div className="absolute top-[2cm] right-[2cm] font-normal text-sm">{page.pageNumber}</div>}
+                        <div className="w-full">
+                            {page.isFirst && <h2 className="text-center font-bold uppercase mb-12">{page.title}</h2>}
+                            <div className="whitespace-pre-wrap text-justify">
+                                {page.content.split('\n').map((l, i) => (
+                                    <p key={i} className="mb-4" style={{ textIndent: (page.type === 'references' || l.trim() === "") ? '0' : '1.25cm' }}>{l}</p>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                );
             };
 
-            if (authStatus === 'loading') return <div className="h-screen flex items-center justify-center bg-slate-950 text-white font-black animate-pulse uppercase tracking-tighter">Lex ABNT v11 - Sincronizando...</div>;
+            const handleExport = (all) => {
+                setIsGeneratingPdf(true);
+                const portal = document.getElementById('print-container');
+                portal.innerHTML = '';
+                const pages = all ? allPagesData : allPagesData.filter(p => p.sectionId === activeSectionId);
+                
+                // Renderização manual para o portal de impressão
+                pages.forEach(p => {
+                    const root = document.createElement('div');
+                    portal.appendChild(root);
+                    ReactDOM.createRoot(root).render(<PageRenderer page={p} isPrint={true} />);
+                });
+
+                setTimeout(() => { setIsGeneratingPdf(false); window.print(); }, 1500);
+            };
+
+            if (authStatus === 'loading') return <div className="h-screen flex items-center justify-center bg-slate-900 text-white font-black animate-pulse">Lex ABNT v12 - Formatando Capas...</div>;
 
             return (
                 <div id="ui-root">
                     {isGeneratingPdf && (
                         <div className="loading-overlay">
-                            <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-6"></div>
-                            <h2 className="font-black uppercase tracking-widest text-lg">Gerando PDF Perfeito</h2>
-                            <p className="text-slate-400 text-sm mt-2">Garantindo a numeração de todas as páginas...</p>
+                            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                            <h2 className="font-black uppercase tracking-widest text-sm">Organizando Layout Académico</h2>
+                            <p className="text-slate-400 text-[10px] mt-2">A preparar Capa, Folha de Rosto e Paginação...</p>
                         </div>
                     )}
 
                     <div className="flex h-screen overflow-hidden print-hidden">
                         <aside className="w-80 bg-slate-900 text-white flex flex-col shadow-2xl z-30">
                             <div className="p-6 bg-slate-950 border-b border-slate-800 flex items-center gap-3">
-                                <div className="bg-blue-600 p-2 rounded-xl shadow-lg"><i data-lucide="award" className="w-5 h-5"></i></div>
-                                <div><h1 className="font-black italic uppercase tracking-tighter text-lg leading-none">Lex ABNT</h1><p className="text-[8px] text-slate-500 font-bold uppercase mt-1">Law Precision v11</p></div>
+                                <div className="bg-blue-600 p-2 rounded-xl"><i data-lucide="scale" className="w-5 h-5"></i></div>
+                                <div><h1 className="font-black italic uppercase tracking-tighter text-lg leading-none">Lex ABNT</h1><p className="text-[8px] text-slate-500 font-bold uppercase mt-1">UFRJ Edition v12</p></div>
                             </div>
                             <div className="flex-1 overflow-y-auto p-4 space-y-1 custom-scroll">
                                 {sections.map(s => {
-                                    const pageInfo = allPagesData.find(p => p.sectionId === s.id && p.isFirstOfSection);
+                                    const firstPage = allPagesData.find(p => p.sectionId === s.id && p.isFirst);
                                     return (
-                                        <button key={s.id} onClick={() => { setActiveSectionId(s.id); activeIdRef.current = s.id; isTypingRef.current = false; }} className={`w-full text-left p-4 rounded-2xl text-[11px] font-bold uppercase transition-all flex justify-between items-center group ${activeSectionId === s.id ? 'bg-blue-600 text-white shadow-xl translate-x-1' : 'hover:bg-slate-800 text-slate-400'}`}>
+                                        <button key={s.id} onClick={() => { setActiveSectionId(s.id); activeIdRef.current = s.id; isTypingRef.current = false; }} className={`w-full text-left p-4 rounded-2xl text-[11px] font-bold uppercase transition-all flex justify-between items-center group ${activeSectionId === s.id ? 'bg-blue-600 text-white shadow-lg translate-x-1' : 'hover:bg-slate-800 text-slate-400'}`}>
                                             <span className="truncate">{s.title}</span>
-                                            {pageInfo?.pageNumber > 0 && <span className={`text-[9px] px-2 py-0.5 rounded-full ${activeSectionId === s.id ? 'bg-blue-500 border border-white/20' : 'bg-slate-950'}`}>P.{pageInfo.pageNumber}</span>}
+                                            {firstPage?.pageNumber > 0 && <span className={`text-[9px] px-2 py-0.5 rounded-full ${activeSectionId === s.id ? 'bg-blue-500 border border-white/20' : 'bg-slate-950'}`}>P.{firstPage.pageNumber}</span>}
                                         </button>
                                     );
                                 })}
@@ -361,13 +309,13 @@
                         <main className="flex-1 flex flex-col min-w-0">
                             <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shadow-sm z-20">
                                 <div className="flex bg-slate-100 p-1 rounded-xl gap-1 border border-slate-200">
-                                    <button onClick={() => setViewMode('edit')} className={`px-6 py-2 rounded-lg text-[10px] font-black transition-all ${viewMode === 'edit' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-800'}`}>ESCREVER</button>
-                                    <button onClick={() => setViewMode('preview')} className={`px-6 py-2 rounded-lg text-[10px] font-black transition-all ${viewMode === 'preview' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-800'}`}>VER FOLHAS</button>
+                                    <button onClick={() => setViewMode('edit')} className={`px-6 py-2 rounded-lg text-[10px] font-black transition-all ${viewMode === 'edit' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}>ESCREVER</button>
+                                    <button onClick={() => setViewMode('preview')} className={`px-6 py-2 rounded-lg text-[10px] font-black transition-all ${viewMode === 'preview' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}>VER FOLHAS</button>
                                 </div>
                                 <div className="flex items-center gap-4">
                                     <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border ${syncStatus === 'syncing' ? 'bg-orange-50 text-orange-600 border-orange-200' : 'bg-green-50 text-green-600 border-green-200'} text-[9px] font-black`}>
-                                        {syncStatus === 'syncing' ? <i data-lucide="refresh-cw" className="w-3 h-3 animate-spin"></i> : <i data-lucide="check" className="w-3 h-3"></i>}
-                                        <span>{syncStatus === 'syncing' ? 'A GUARDAR...' : 'SINCRONIZADO'}</span>
+                                        {syncStatus === 'syncing' ? <i data-lucide="rotate-cw" className="w-3 h-3 animate-spin"></i> : <i data-lucide="check" className="w-3 h-3"></i>}
+                                        <span>{syncStatus === 'syncing' ? 'A GUARDAR...' : 'GUARDADO'}</span>
                                     </div>
                                     <button onClick={() => handleExport(false)} className="bg-slate-800 text-white px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase hover:bg-black transition-all flex items-center gap-2 shadow-md"><i data-lucide="printer" className="w-4 h-4"></i> SEÇÃO</button>
                                     <button onClick={() => handleExport(true)} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase hover:bg-blue-700 shadow-lg flex items-center gap-2 border border-blue-500 active:scale-95"><i data-lucide="file-check" className="w-4 h-4"></i> PDF COMPLETO</button>
@@ -380,7 +328,7 @@
                                         <div className="px-10 py-6 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
                                             <h2 className="text-[13px] font-black text-slate-800 uppercase tracking-tight">{activeSection?.title}</h2>
                                             <select value={fontFamily} onChange={e => setFontFamily(e.target.value)} className="text-[10px] font-black bg-white border border-slate-200 rounded-lg px-4 py-2 shadow-sm cursor-pointer outline-none">
-                                                <option value="Arial">ARIAL (PADRÃO)</option>
+                                                <option value="Arial">ARIAL (UFRJ)</option>
                                                 <option value="Times">TIMES NEW ROMAN</option>
                                             </select>
                                         </div>
@@ -388,19 +336,7 @@
                                     </div>
                                 ) : (
                                     <div className="scale-90 origin-top pb-20">
-                                        {allPagesData.filter(p => p.sectionId === activeSectionId).map(p => (
-                                            <div key={p.id} className="abnt-page-screen" style={{ fontFamily: fontFamily === 'Arial' ? 'Arial' : 'Times New Roman' }}>
-                                                {p.showNumber && <div className="absolute top-[2cm] right-[2cm] font-normal text-sm">{p.pageNumber}</div>}
-                                                {p.isFirstOfSection && p.type !== 'cover' && p.type !== 'title_page' && <h2 className="text-center font-bold uppercase mb-12 text-[12pt]">{p.title}</h2>}
-                                                <div className="whitespace-pre-wrap text-justify leading-[1.5] text-[12pt]">
-                                                    {p.content.split('\n').map((line, lIdx) => (
-                                                        <p key={lIdx} className="mb-4" style={{ textIndent: (p.type === 'references' || line.trim() === "") ? '0' : '1.25cm' }}>
-                                                            {line}
-                                                        </p>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        ))}
+                                        {allPagesData.filter(p => p.sectionId === activeSectionId).map(p => <PageRenderer key={p.id} page={p} isPrint={false} />)}
                                     </div>
                                 )}
                             </div>
