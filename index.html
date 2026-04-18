@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lex ABNT - Alisson Pro Edition v12</title>
+    <title>Lex ABNT - Alisson Pro Edition v17</title>
     
     <!-- Bibliotecas via CDN -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -16,7 +16,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-        import { getFirestore, collection, doc, onSnapshot, query, updateDoc, addDoc, deleteDoc, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getFirestore, collection, doc, onSnapshot, query, updateDoc, setDoc, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDxSDZ3J_Q9sdVkC9S7wYmqSbTjatxLab0",
@@ -27,7 +27,7 @@
             appId: "1:939976247624:web:d142f11e531234507a0b7d"
         };
 
-        window.FB = { initializeApp, getAuth, signInAnonymously, onAuthStateChanged, getFirestore, collection, doc, onSnapshot, query, updateDoc, addDoc, deleteDoc, getDocs, writeBatch, firebaseConfig };
+        window.FB = { initializeApp, getAuth, signInAnonymously, onAuthStateChanged, getFirestore, collection, doc, onSnapshot, query, updateDoc, setDoc, getDocs, writeBatch, firebaseConfig };
     </script>
 
     <style>
@@ -38,13 +38,11 @@
         .custom-scroll::-webkit-scrollbar-track { background: transparent; }
         .custom-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
 
-        /* --- CONFIGURAÇÃO DE IMPRESSÃO INFALÍVEL --- */
         @media print {
             @page { size: A4; margin: 0; }
             html, body { background: white !important; height: auto !important; overflow: visible !important; }
             #root { display: none !important; }
             #print-container { display: block !important; width: 210mm !important; margin: 0 !important; background: white !important; }
-
             .abnt-page-print { 
                 display: flex !important;
                 flex-direction: column;
@@ -57,14 +55,13 @@
                 page-break-after: always !important;
                 break-after: page !important;
                 color: black !important;
+                overflow: hidden !important;
             }
-
-            .no-print { display: none !important; }
         }
         
         .abnt-page-screen {
             width: 21cm;
-            height: 29.7cm;
+            min-height: 29.7cm;
             padding: 3cm 2cm 2cm 3cm;
             background: white;
             box-shadow: 0 10px 40px rgba(0,0,0,0.1);
@@ -74,6 +71,19 @@
             color: black;
             display: flex;
             flex-direction: column;
+        }
+
+        .user-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            color: white;
+            flex-shrink: 0;
         }
     </style>
 </head>
@@ -85,53 +95,96 @@
         const { useState, useEffect, useRef } = React;
 
         const MANDATORY_SECTIONS = [
-            { title: 'Capa', content: 'UNIVERSIDADE FEDERAL DO RIO DE JANEIRO\nFACULDADE DE DIREITO\n\nALISSON CAMBUI DA SILVA\n\nINIMPUTABILIDADE PENAL: OS ASPECTOS LEGAIS RELATIVOS AO ACUSADO PORTADOR DE SOFRIMENTO PSÍQUICO\n\nRio de Janeiro\n2026', type: 'cover', order: 0 },
-            { title: 'Folha de Rosto', content: 'ALISSON CAMBUI DA SILVA\n\nINIMPUTABILIDADE PENAL: OS ASPECTOS LEGAIS RELATIVOS AO ACUSADO PORTADOR DE SOFRIMENTO PSÍQUICO\n\nMonografia apresentada à Faculdade de Direito da Universidade Federal do Rio de Janeiro como requisito para obtenção do grau de Bacharel em Direito.\n\nOrientador: Prof. Ms. Hamilton Gonçalves Ferraz\n\nRio de Janeiro\n2026', type: 'title_page', order: 1 },
-            { title: 'Resumo', content: 'Escreva o seu resumo aqui...', type: 'pre-textual', order: 2 },
+            { title: 'Capa', content: 'UNIVERSIDADE ANHANGUERA\nFACULDADE DE DIREITO\n\nRENATA BISPO CAMBUI\n\nPROJETO DE EXTENSÃO: INIMPUTABILIDADE PENAL E SAÚDE MENTAL\n\nSão Paulo\n2026', type: 'cover', order: 0 },
+            { title: 'Folha de Rosto', content: 'Monografia apresentada à Faculdade de Direito da Universidade Anhanguera como requisito para obtenção do grau de Bacharel em Direito.\n\nOrientador: Prof. Ms. Hamilton Gonçalves Ferraz', type: 'title_page', order: 1 },
+            { title: 'Resumo', content: 'Resumo do trabalho...', type: 'pre-textual', order: 2 },
             { title: 'Sumário', content: 'INTRODUÇÃO\n1. DESENVOLVIMENTO\nCONCLUSÃO\nREFERÊNCIAS', type: 'pre-textual', order: 3 },
             { title: 'Introdução', content: 'Texto inicial...', type: 'textual', order: 4 },
-            { title: 'Desenvolvimento', content: 'Texto longo...', type: 'textual', order: 5 },
+            { title: 'Desenvolvimento', content: 'Conteúdo...', type: 'textual', order: 5 },
             { title: 'Conclusão', content: 'Conclusão...', type: 'textual', order: 6 },
             { title: 'Referências Bibliográficas', content: 'AMARANTE, Paulo. Loucos pela Vida. Rio de Janeiro: Fiocruz, 2013.', type: 'references', order: 7 },
         ];
+
+        const stringToColor = (str) => {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+            return "#" + "00000".substring(0, 6 - c.length) + c;
+        };
 
         function App() {
             const [user, setUser] = useState(null);
             const [db, setDb] = useState(null);
             const [authStatus, setAuthStatus] = useState('loading');
             const [sections, setSections] = useState([]);
+            const [onlineUsers, setOnlineUsers] = useState([]);
             const [activeSectionId, setActiveSectionId] = useState(null);
             const [localText, setLocalText] = useState('');
             const [viewMode, setViewMode] = useState('edit');
             const [syncStatus, setSyncStatus] = useState('synced');
             const [fontFamily, setFontFamily] = useState('Arial');
             const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+            const [userName, setUserName] = useState(localStorage.getItem('lex_abnt_user_name') || 'Utilizador');
 
             const isTypingRef = useRef(false);
             const activeIdRef = useRef(null);
+            const appId = 'abnt-ufrj-alisson-v17';
 
             useEffect(() => { if (window.lucide) lucide.createIcons(); });
 
+            // Inicialização Automática (Sem bloqueio de ecrã)
             useEffect(() => {
-                const initFirebase = async () => {
+                const init = async () => {
                     if (window.FB) {
                         const app = window.FB.initializeApp(window.FB.firebaseConfig);
-                        const auth = window.FB.getAuth(app);
                         const firestore = window.FB.getFirestore(app);
                         setDb(firestore);
-                        try { await window.FB.signInAnonymously(auth); } catch (e) { setAuthStatus('error'); }
-                        window.FB.onAuthStateChanged(auth, (u) => { if (u) { setUser(u); setAuthStatus('authenticated'); } });
+                        try {
+                            const cred = await window.FB.signInAnonymously(window.FB.getAuth(app));
+                            setUser(cred.user);
+                            setAuthStatus('authenticated');
+                            // Actualiza presença inicial
+                            await updatePresence(firestore, cred.user.uid, userName);
+                        } catch (e) { setAuthStatus('error'); }
                     }
                 };
-                initFirebase();
+                init();
             }, []);
 
+            const updatePresence = async (firestore, uid, name) => {
+                const presenceRef = window.FB.doc(firestore, 'artifacts', appId, 'public', 'data', 'presence', uid);
+                await window.FB.setDoc(presenceRef, {
+                    uid: uid,
+                    name: name,
+                    lastActive: Date.now(),
+                    color: stringToColor(uid)
+                });
+            };
+
+            const handleNameChange = (newName) => {
+                setUserName(newName);
+                localStorage.setItem('lex_abnt_user_name', newName);
+                if (user && db) updatePresence(db, user.uid, newName);
+            };
+
+            // Heartbeat
+            useEffect(() => {
+                if (user && db) {
+                    const timer = setInterval(() => {
+                        const presenceRef = window.FB.doc(db, 'artifacts', appId, 'public', 'data', 'presence', user.uid);
+                        window.FB.updateDoc(presenceRef, { lastActive: Date.now() });
+                    }, 20000);
+                    return () => clearInterval(timer);
+                }
+            }, [user, db]);
+
+            // Sincronização
             useEffect(() => {
                 if (!user || !db) return;
-                const appId = 'abnt-ufrj-alisson-v12';
                 const sectionsRef = window.FB.collection(db, 'artifacts', appId, 'public', 'data', 'sections');
+                const presenceRef = window.FB.collection(db, 'artifacts', appId, 'public', 'data', 'presence');
 
-                const unsub = window.FB.onSnapshot(sectionsRef, (snap) => {
+                const unsubSec = window.FB.onSnapshot(sectionsRef, (snap) => {
                     if (snap.empty) {
                         const batch = window.FB.writeBatch(db);
                         MANDATORY_SECTIONS.forEach(sec => {
@@ -148,7 +201,13 @@
                         }
                     }
                 });
-                return () => unsub();
+
+                const unsubPresence = window.FB.onSnapshot(presenceRef, (snap) => {
+                    const now = Date.now();
+                    setOnlineUsers(snap.docs.map(d => d.data()).filter(u => (now - u.lastActive) < 60000));
+                });
+
+                return () => { unsubSec(); unsubPresence(); };
             }, [user, db]);
 
             const activeSection = sections.find(s => s.id === activeSectionId);
@@ -162,97 +221,75 @@
                 setSyncStatus('syncing');
                 const timer = setTimeout(async () => {
                     if (!activeSectionId) return;
-                    const sectionRef = window.FB.doc(db, 'artifacts', 'abnt-ufrj-alisson-v12', 'public', 'data', 'sections', activeSectionId);
-                    await window.FB.updateDoc(sectionRef, { content: localText, updatedAt: Date.now() });
+                    const sectionRef = window.FB.doc(db, 'artifacts', appId, 'public', 'data', 'sections', activeSectionId);
+                    await window.FB.updateDoc(sectionRef, { content: localText, updatedAt: Date.now(), lastEditedBy: user.uid });
                     setSyncStatus('synced');
                     isTypingRef.current = false;
-                }, 1000);
+                }, 800);
                 return () => clearTimeout(timer);
             }, [localText]);
 
-            const getPages = () => {
-                let globalPageCounter = 0; 
-                let allPages = [];
-                const titlePageIndex = sections.findIndex(s => s.type === 'title_page');
+            const metadata = (() => {
+                const cover = sections.find(s => s.type === 'cover');
+                const text = (activeSectionId === cover?.id) ? localText : (cover?.content || '');
+                const lines = text.split('\n').filter(l => l.trim() !== "");
+                return {
+                    institution: lines.slice(0, 2).join('\n'),
+                    author: lines[2] || "NOME DO AUTOR",
+                    footer: lines.slice(-2).join('\n'),
+                    title: lines.slice(3, -2).join('\n')
+                };
+            })();
 
+            const allPagesData = (() => {
+                let globalCounter = 0; 
+                let results = [];
+                const titlePageIndex = sections.findIndex(s => s.type === 'title_page');
                 sections.forEach((sec, idx) => {
                     const text = (sec.id === activeSectionId) ? localText : (sec.content || '');
-                    
-                    if (sec.type === 'cover' || sec.type === 'title_page') {
-                        if (idx >= titlePageIndex) globalPageCounter++;
-                        allPages.push({ id: sec.id, sectionId: sec.id, type: sec.type, content: text, pageNumber: globalPageCounter, showNumber: false, isFirst: true, title: sec.title });
-                    } else {
-                        const charsPerPage = 2000; // Mais conservador para garantir numeração
-                        const pagesCount = Math.max(1, Math.ceil(text.length / charsPerPage));
-                        if (idx >= titlePageIndex) globalPageCounter++;
-                        for (let p = 0; p < pagesCount; p++) {
-                            allPages.push({
-                                id: `${sec.id}-${p}`, sectionId: sec.id, type: sec.type,
-                                content: text.substring(p * charsPerPage, (p + 1) * charsPerPage),
-                                pageNumber: globalPageCounter,
-                                showNumber: (sec.type === 'textual' || sec.type === 'references'),
-                                isFirst: p === 0, title: sec.title
-                            });
-                            if (p < pagesCount - 1 && idx >= titlePageIndex) globalPageCounter++;
-                        }
+                    const charsPerPage = 2100;
+                    const pages = Math.max(1, Math.ceil(text.length / charsPerPage));
+                    if (idx >= titlePageIndex) globalCounter++;
+                    for (let p = 0; p < pages; p++) {
+                        results.push({
+                            id: `${sec.id}-${p}`, sectionId: sec.id, type: sec.type, title: sec.title,
+                            content: text.substring(p * charsPerPage, (p + 1) * charsPerPage),
+                            pageNumber: globalCounter,
+                            showNumber: (sec.type === 'textual' || sec.type === 'references'),
+                            isFirst: p === 0
+                        });
+                        if (p < pages - 1 && idx >= titlePageIndex) globalCounter++;
                     }
                 });
-                return allPages;
-            };
-
-            const allPagesData = getPages();
+                return results;
+            })();
 
             const PageRenderer = ({ page, isPrint = false }) => {
-                const lines = page.content.split('\n').filter(l => l.trim() !== "" || l === "");
-                const dynamicStyle = { fontFamily: fontFamily === 'Arial' ? 'Arial, sans-serif' : '"Times New Roman", serif', fontSize: '12pt', lineHeight: '1.5' };
-
-                // Layout Académico Especial para Capa e Folha de Rosto
+                const style = { fontFamily: fontFamily === 'Arial' ? 'Arial, sans-serif' : '"Times New Roman", serif', fontSize: '12pt', lineHeight: '1.5' };
                 if (page.type === 'cover' || page.type === 'title_page') {
-                    const authorLine = lines.find(l => l.toUpperCase() === l && l.length > 3 && !l.includes('UNIVERSIDADE') && !l.includes('FACULDADE'));
-                    const titleLine = lines.find(l => l.length > 20);
-                    const locationLines = lines.slice(-2);
-                    const institutionLines = lines.filter(l => l.includes('UNIVERSIDADE') || l.includes('FACULDADE') || l.includes('CENTRO'));
-                    const descriptionLine = lines.find(l => l.length > 50 && !l.includes('UNIVERSIDADE') && l !== titleLine);
-
                     return (
-                        <div className={isPrint ? 'abnt-page-print' : 'abnt-page-screen'} style={dynamicStyle}>
+                        <div className={isPrint ? 'abnt-page-print' : 'abnt-page-screen'} style={style}>
                             <div className="flex flex-col h-full text-center uppercase font-bold justify-between py-2">
-                                {/* Topo: Instituição e Autor */}
-                                <div className="space-y-8">
-                                    <div className="space-y-1">{institutionLines.map((l, i) => <div key={i}>{l}</div>)}</div>
-                                    <div className="mt-12">{authorLine || lines[3]}</div>
+                                <div className="space-y-6">
+                                    {page.type === 'cover' && <div className="whitespace-pre-line">{metadata.institution}</div>}
+                                    <div className={page.type === 'cover' ? "mt-12" : "mt-6"}>{metadata.author}</div>
                                 </div>
-                                
-                                {/* Centro: Título */}
                                 <div className="flex-1 flex flex-col justify-center">
-                                    <div className="text-xl px-4 break-words">{titleLine || "TÍTULO DO TRABALHO"}</div>
-                                    
-                                    {/* Natureza do Trabalho (Apenas Folha de Rosto) */}
-                                    {page.type === 'title_page' && descriptionLine && (
-                                        <div className="mt-8 text-left lowercase font-normal normal-case text-[10pt] leading-tight" style={{ marginLeft: '50%', textTransform: 'none' }}>
-                                            {descriptionLine}
-                                        </div>
-                                    )}
+                                    <div className="text-xl px-4 leading-tight whitespace-pre-line">{metadata.title}</div>
+                                    {page.type === 'title_page' && <div className="mt-10 text-justify lowercase font-normal normal-case text-[10pt] leading-relaxed" style={{ marginLeft: '45%', textTransform: 'none' }}>{page.content}</div>}
                                 </div>
-
-                                {/* Base: Local e Ano */}
-                                <div className="mt-auto space-y-1">
-                                    {locationLines.map((l, i) => <div key={i}>{l}</div>)}
-                                </div>
+                                <div className="mt-auto whitespace-pre-line">{metadata.footer}</div>
                             </div>
                         </div>
                     );
                 }
-
                 return (
-                    <div className={isPrint ? 'abnt-page-print' : 'abnt-page-screen'} style={dynamicStyle}>
+                    <div className={isPrint ? 'abnt-page-print' : 'abnt-page-screen'} style={style}>
                         {page.showNumber && <div className="absolute top-[2cm] right-[2cm] font-normal text-sm">{page.pageNumber}</div>}
                         <div className="w-full">
                             {page.isFirst && <h2 className="text-center font-bold uppercase mb-12">{page.title}</h2>}
                             <div className="whitespace-pre-wrap text-justify">
-                                {page.content.split('\n').map((l, i) => (
-                                    <p key={i} className="mb-4" style={{ textIndent: (page.type === 'references' || l.trim() === "") ? '0' : '1.25cm' }}>{l}</p>
-                                ))}
+                                {page.content.split('\n').map((l, i) => <p key={i} className="mb-4" style={{ textIndent: (page.type === 'references' || l.trim() === "") ? '0' : '1.25cm' }}>{l}</p>)}
                             </div>
                         </div>
                     </div>
@@ -264,70 +301,95 @@
                 const portal = document.getElementById('print-container');
                 portal.innerHTML = '';
                 const pages = all ? allPagesData : allPagesData.filter(p => p.sectionId === activeSectionId);
-                
-                // Renderização manual para o portal de impressão
                 pages.forEach(p => {
                     const root = document.createElement('div');
                     portal.appendChild(root);
                     ReactDOM.createRoot(root).render(<PageRenderer page={p} isPrint={true} />);
                 });
-
-                setTimeout(() => { setIsGeneratingPdf(false); window.print(); }, 1500);
+                setTimeout(() => { setIsGeneratingPdf(false); window.print(); }, 1200);
             };
 
-            if (authStatus === 'loading') return <div className="h-screen flex items-center justify-center bg-slate-900 text-white font-black animate-pulse">Lex ABNT v12 - Formatando Capas...</div>;
+            if (authStatus === 'loading') return <div className="h-screen flex items-center justify-center bg-slate-900 text-white font-black animate-pulse uppercase">Lex ABNT v17 - Acesso Direto...</div>;
 
             return (
                 <div id="ui-root">
                     {isGeneratingPdf && (
-                        <div className="loading-overlay">
+                        <div className="fixed inset-0 z-[500] bg-slate-900/90 flex flex-col items-center justify-center text-white">
                             <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                            <h2 className="font-black uppercase tracking-widest text-sm">Organizando Layout Académico</h2>
-                            <p className="text-slate-400 text-[10px] mt-2">A preparar Capa, Folha de Rosto e Paginação...</p>
+                            <h2 className="font-black uppercase tracking-widest text-sm">Gerando PDF Integrado</h2>
                         </div>
                     )}
 
-                    <div className="flex h-screen overflow-hidden print-hidden">
+                    <div className="flex h-screen overflow-hidden">
                         <aside className="w-80 bg-slate-900 text-white flex flex-col shadow-2xl z-30">
                             <div className="p-6 bg-slate-950 border-b border-slate-800 flex items-center gap-3">
-                                <div className="bg-blue-600 p-2 rounded-xl"><i data-lucide="scale" className="w-5 h-5"></i></div>
-                                <div><h1 className="font-black italic uppercase tracking-tighter text-lg leading-none">Lex ABNT</h1><p className="text-[8px] text-slate-500 font-bold uppercase mt-1">UFRJ Edition v12</p></div>
+                                <div className="bg-blue-600 p-2 rounded-xl"><i data-lucide="layout-dashboard" className="w-5 h-5"></i></div>
+                                <div><h1 className="font-black italic uppercase tracking-tighter text-lg leading-none">Lex ABNT</h1><p className="text-[8px] text-slate-500 font-bold uppercase mt-1">UFRJ EDITION v17</p></div>
                             </div>
-                            <div className="flex-1 overflow-y-auto p-4 space-y-1 custom-scroll">
-                                {sections.map(s => {
-                                    const firstPage = allPagesData.find(p => p.sectionId === s.id && p.isFirst);
-                                    return (
-                                        <button key={s.id} onClick={() => { setActiveSectionId(s.id); activeIdRef.current = s.id; isTypingRef.current = false; }} className={`w-full text-left p-4 rounded-2xl text-[11px] font-bold uppercase transition-all flex justify-between items-center group ${activeSectionId === s.id ? 'bg-blue-600 text-white shadow-lg translate-x-1' : 'hover:bg-slate-800 text-slate-400'}`}>
-                                            <span className="truncate">{s.title}</span>
-                                            {firstPage?.pageNumber > 0 && <span className={`text-[9px] px-2 py-0.5 rounded-full ${activeSectionId === s.id ? 'bg-blue-500 border border-white/20' : 'bg-slate-950'}`}>P.{firstPage.pageNumber}</span>}
-                                        </button>
-                                    );
-                                })}
+                            
+                            <div className="flex-1 overflow-y-auto custom-scroll p-4 space-y-6">
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-4 px-2">Estrutura</p>
+                                    {sections.map(s => {
+                                        const firstPage = allPagesData.find(p => p.sectionId === s.id && p.isFirst);
+                                        return (
+                                            <button key={s.id} onClick={() => { setActiveSectionId(s.id); activeIdRef.current = s.id; isTypingRef.current = false; }} className={`w-full text-left p-3 rounded-xl text-[11px] font-bold uppercase transition-all flex justify-between items-center group ${activeSectionId === s.id ? 'bg-blue-600 text-white shadow-xl' : 'hover:bg-slate-800 text-slate-400'}`}>
+                                                <span className="truncate">{s.title}</span>
+                                                {firstPage?.pageNumber > 0 && <span className={`text-[9px] px-2 py-0.5 rounded-full ${activeSectionId === s.id ? 'bg-blue-500' : 'bg-slate-950'}`}>P.{firstPage.pageNumber}</span>}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className="pt-6 border-t border-slate-800">
+                                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-4 px-2">Quem está online</p>
+                                    <div className="space-y-3 px-2">
+                                        {onlineUsers.map(u => (
+                                            <div key={u.uid} className="flex items-center gap-3">
+                                                <div className="user-avatar" style={{ backgroundColor: u.color }}>{u.name.substring(0, 1).toUpperCase()}</div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] font-bold text-slate-200">{u.name} {u.uid === user?.uid && "(Tu)"}</span>
+                                                    <span className="text-[8px] text-green-500 font-bold uppercase tracking-tighter">Online</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-4 bg-slate-950 border-t border-slate-800">
+                                <p className="text-[9px] font-bold text-slate-600 uppercase mb-2">Identificação:</p>
+                                <input 
+                                    type="text" 
+                                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-blue-500 transition-all"
+                                    value={userName}
+                                    onChange={(e) => handleNameChange(e.target.value)}
+                                />
                             </div>
                         </aside>
 
-                        <main className="flex-1 flex flex-col min-w-0">
+                        <main className="flex-1 flex flex-col min-w-0 bg-slate-50">
                             <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shadow-sm z-20">
                                 <div className="flex bg-slate-100 p-1 rounded-xl gap-1 border border-slate-200">
-                                    <button onClick={() => setViewMode('edit')} className={`px-6 py-2 rounded-lg text-[10px] font-black transition-all ${viewMode === 'edit' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}>ESCREVER</button>
-                                    <button onClick={() => setViewMode('preview')} className={`px-6 py-2 rounded-lg text-[10px] font-black transition-all ${viewMode === 'preview' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}>VER FOLHAS</button>
+                                    <button onClick={() => setViewMode('edit')} className={`px-6 py-2 rounded-lg text-[10px] font-black tracking-widest transition-all ${viewMode === 'edit' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}>EDITAR</button>
+                                    <button onClick={() => setViewMode('preview')} className={`px-6 py-2 rounded-lg text-[10px] font-black tracking-widest transition-all ${viewMode === 'preview' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}>VISUALIZAR</button>
                                 </div>
                                 <div className="flex items-center gap-4">
-                                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border ${syncStatus === 'syncing' ? 'bg-orange-50 text-orange-600 border-orange-200' : 'bg-green-50 text-green-600 border-green-200'} text-[9px] font-black`}>
+                                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border ${syncStatus === 'syncing' ? 'bg-orange-50 text-orange-600 border-orange-200' : 'bg-green-50 text-green-600 border-green-200'} text-[9px] font-black uppercase`}>
                                         {syncStatus === 'syncing' ? <i data-lucide="rotate-cw" className="w-3 h-3 animate-spin"></i> : <i data-lucide="check" className="w-3 h-3"></i>}
-                                        <span>{syncStatus === 'syncing' ? 'A GUARDAR...' : 'GUARDADO'}</span>
+                                        <span>{syncStatus === 'syncing' ? 'Salvando...' : 'Sincronizado'}</span>
                                     </div>
                                     <button onClick={() => handleExport(false)} className="bg-slate-800 text-white px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase hover:bg-black transition-all flex items-center gap-2 shadow-md"><i data-lucide="printer" className="w-4 h-4"></i> SEÇÃO</button>
                                     <button onClick={() => handleExport(true)} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase hover:bg-blue-700 shadow-lg flex items-center gap-2 border border-blue-500 active:scale-95"><i data-lucide="file-check" className="w-4 h-4"></i> PDF COMPLETO</button>
                                 </div>
                             </header>
 
-                            <div className="flex-1 overflow-y-auto p-12 flex flex-col items-center custom-scroll bg-slate-50">
+                            <div className="flex-1 overflow-y-auto p-12 flex flex-col items-center custom-scroll">
                                 {viewMode === 'edit' ? (
                                     <div className="w-full max-w-4xl flex flex-col bg-white rounded-[2rem] shadow-2xl border border-slate-200 overflow-hidden">
                                         <div className="px-10 py-6 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
                                             <h2 className="text-[13px] font-black text-slate-800 uppercase tracking-tight">{activeSection?.title}</h2>
-                                            <select value={fontFamily} onChange={e => setFontFamily(e.target.value)} className="text-[10px] font-black bg-white border border-slate-200 rounded-lg px-4 py-2 shadow-sm cursor-pointer outline-none">
+                                            <select value={fontFamily} onChange={e => setFontFamily(e.target.value)} className="text-[10px] font-black bg-white border border-slate-200 rounded-lg px-4 py-2 shadow-sm outline-none">
                                                 <option value="Arial">ARIAL (UFRJ)</option>
                                                 <option value="Times">TIMES NEW ROMAN</option>
                                             </select>
