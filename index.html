@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lex ABNT - Edição Local v26</title>
+    <title>Lex ABNT - Edição Local v27</title>
     
     <!-- Bibliotecas via CDN -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -41,7 +41,6 @@
                 overflow: hidden !important;
             }
 
-            /* Remove a quebra de página na última folha para evitar a página em branco detectada na v25 */
             #print-container > div:last-child .abnt-page-print {
                 page-break-after: avoid !important;
                 break-after: avoid !important;
@@ -108,14 +107,14 @@
                 content: ''
             },
             { id: 'sec_2', title: 'Sumário', content: 'INTRODUÇÃO\n1. DESENVOLVIMENTO\nCONCLUSÃO\nREFERÊNCIAS', type: 'pre-textual' },
-            { id: 'sec_3', title: 'Introdução', content: 'Inicie o seu texto aqui. A numeração deverá aparecer nesta página pela primeira vez.', type: 'textual' },
+            { id: 'sec_3', title: 'Introdução', content: 'Inicie o seu texto aqui. A numeração deverá aparecer nesta página pela primeira vez no canto inferior direito.', type: 'textual' },
             { id: 'sec_4', title: 'Desenvolvimento', content: 'Conteúdo do trabalho...', type: 'textual' },
             { id: 'sec_5', title: 'Conclusão', content: 'Considerações finais...', type: 'textual' },
             { id: 'sec_6', title: 'Referências Bibliográficas', content: 'AMARANTE, Paulo. Loucos pela Vida. Rio de Janeiro: FIOCRUZ, 2013.', type: 'references' },
         ];
 
         function App() {
-            const storageKey = 'lex_abnt_local_v26';
+            const storageKey = 'lex_abnt_local_v27';
             const savedData = localStorage.getItem(storageKey);
             const [sections, setSections] = useState(savedData ? JSON.parse(savedData) : INITIAL_SECTIONS);
             const [activeSectionId, setActiveSectionId] = useState(sections[0].id);
@@ -181,7 +180,7 @@
                 return () => clearTimeout(timer);
             }, [localText]);
 
-            // MOTOR DE PAGINAÇÃO V26 - RIGOR ABNT
+            // MOTOR DE PAGINAÇÃO V27 - RIGOR ABNT (Posição Inferior Direita)
             const allPagesData = (() => {
                 let globalCounter = 0; 
                 let results = [];
@@ -191,7 +190,6 @@
                 sections.forEach((sec, idx) => {
                     const text = (sec.id === activeSectionId) ? localText : (sec.content || '');
                     
-                    // ABNT: Capa (idx 0) não conta. Folha de Rosto (idx 1) é a página 1.
                     if (idx >= titlePageIndex) {
                         globalCounter++;
                     }
@@ -200,7 +198,7 @@
                         results.push({ 
                             ...sec, 
                             pageNumber: globalCounter, 
-                            showNumber: false, // Nunca mostra número na Folha de Rosto
+                            showNumber: false, 
                             isFirst: true,
                             content: text 
                         });
@@ -215,12 +213,10 @@
                                 sectionId: sec.id,
                                 content: text.substring(p * charsPerPage, (p + 1) * charsPerPage),
                                 pageNumber: globalCounter,
-                                // MOSTRA NÚMERO: Apenas se for a Introdução ou posterior
                                 showNumber: idx >= introIndex,
                                 isFirst: p === 0
                             });
                             
-                            // Incrementa se houver páginas extras dentro da mesma secção
                             if (p < pagesCount - 1 && idx >= titlePageIndex) {
                                 globalCounter++;
                             }
@@ -291,7 +287,12 @@
 
                 return (
                     <div className={isPrint ? 'abnt-page-print' : 'abnt-page-screen'} style={style}>
-                        {page.showNumber && <div className="absolute top-[2cm] right-[2cm] font-normal text-sm">{page.pageNumber}</div>}
+                        {/* Numeração na Parte Inferior Direita */}
+                        {page.showNumber && (
+                            <div className="absolute bottom-[2cm] right-[2cm] font-normal text-sm">
+                                {page.pageNumber}
+                            </div>
+                        )}
                         <div className="w-full">
                             {page.isFirst && <h2 className="text-center font-bold uppercase mb-12">{page.title}</h2>}
                             <div className="whitespace-pre-wrap text-justify">
@@ -325,7 +326,7 @@
                     {isGeneratingPdf && (
                         <div className="fixed inset-0 z-[500] bg-slate-900/90 flex flex-col items-center justify-center text-white">
                             <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                            <h2 className="font-black uppercase tracking-widest text-sm text-center">Configurando Paginação ABNT v26<br/><span className="text-[10px] opacity-60 font-normal">Contando desde a Folha de Rosto...</span></h2>
+                            <h2 className="font-black uppercase tracking-widest text-sm text-center">Formatando Trabalho<br/><span className="text-[10px] opacity-60 font-normal">Numeração no canto inferior direito...</span></h2>
                         </div>
                     )}
 
@@ -335,7 +336,7 @@
                                 <div className="bg-blue-600 p-2 rounded-xl shadow-lg text-white">
                                     <i data-lucide="book-marked" className="w-5 h-5"></i>
                                 </div>
-                                <div><h1 className="font-black italic uppercase tracking-tighter text-lg leading-none">Lex ABNT</h1><p className="text-[8px] text-slate-500 font-bold uppercase mt-1">Rule v26</p></div>
+                                <div><h1 className="font-black italic uppercase tracking-tighter text-lg leading-none">Lex ABNT</h1><p className="text-[8px] text-slate-500 font-bold uppercase mt-1">Law v27</p></div>
                             </div>
                             
                             <div className="flex-1 overflow-y-auto custom-scroll p-4 space-y-1">
