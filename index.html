@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lex ABNT - Edição Local v24</title>
+    <title>Lex ABNT - Edição Local v26</title>
     
     <!-- Bibliotecas via CDN -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -25,6 +25,7 @@
             html, body { background: white !important; height: auto !important; overflow: visible !important; }
             #root { display: none !important; }
             #print-container { display: block !important; width: 210mm !important; margin: 0 !important; background: white !important; }
+            
             .abnt-page-print { 
                 display: flex !important;
                 flex-direction: column;
@@ -38,6 +39,12 @@
                 break-after: page !important;
                 color: black !important;
                 overflow: hidden !important;
+            }
+
+            /* Remove a quebra de página na última folha para evitar a página em branco detectada na v25 */
+            #print-container > div:last-child .abnt-page-print {
+                page-break-after: avoid !important;
+                break-after: avoid !important;
             }
         }
         
@@ -75,7 +82,6 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // Estrutura atualizada para suportar múltiplos autores
         const INITIAL_SECTIONS = [
             { 
                 id: 'sec_0', 
@@ -84,9 +90,7 @@
                 data: {
                     university: 'UNIVERSIDADE ANHANGUERA',
                     faculty: 'FACULDADE DE DIREITO',
-                    authors: [
-                        { name: 'RENATA BISPO CAMBUI', ra: '123456789' }
-                    ],
+                    authors: [{ name: 'RENATA BISPO CAMBUI', ra: '123456789' }],
                     title: 'PROJETO DE EXTENSÃO: INIMPUTABILIDADE PENAL E SAÚDE MENTAL',
                     city: 'São Paulo',
                     year: '2026'
@@ -104,14 +108,14 @@
                 content: ''
             },
             { id: 'sec_2', title: 'Sumário', content: 'INTRODUÇÃO\n1. DESENVOLVIMENTO\nCONCLUSÃO\nREFERÊNCIAS', type: 'pre-textual' },
-            { id: 'sec_3', title: 'Introdução', content: 'Inicie o seu texto aqui...', type: 'textual' },
+            { id: 'sec_3', title: 'Introdução', content: 'Inicie o seu texto aqui. A numeração deverá aparecer nesta página pela primeira vez.', type: 'textual' },
             { id: 'sec_4', title: 'Desenvolvimento', content: 'Conteúdo do trabalho...', type: 'textual' },
             { id: 'sec_5', title: 'Conclusão', content: 'Considerações finais...', type: 'textual' },
             { id: 'sec_6', title: 'Referências Bibliográficas', content: 'AMARANTE, Paulo. Loucos pela Vida. Rio de Janeiro: FIOCRUZ, 2013.', type: 'references' },
         ];
 
         function App() {
-            const storageKey = 'lex_abnt_local_v24';
+            const storageKey = 'lex_abnt_local_v26';
             const savedData = localStorage.getItem(storageKey);
             const [sections, setSections] = useState(savedData ? JSON.parse(savedData) : INITIAL_SECTIONS);
             const [activeSectionId, setActiveSectionId] = useState(sections[0].id);
@@ -148,7 +152,6 @@
                 setSyncStatus('synced');
             };
 
-            // Funções para gerir lista de autores
             const handleAuthorUpdate = (index, field, value) => {
                 const updatedAuthors = [...activeSection.data.authors];
                 updatedAuthors[index][field] = value;
@@ -178,27 +181,49 @@
                 return () => clearTimeout(timer);
             }, [localText]);
 
+            // MOTOR DE PAGINAÇÃO V26 - RIGOR ABNT
             const allPagesData = (() => {
-                let globalCounter = 0; let results = [];
+                let globalCounter = 0; 
+                let results = [];
                 const titlePageIndex = sections.findIndex(s => s.type === 'title_page');
+                const introIndex = sections.findIndex(s => s.title.toLowerCase().includes('introdução'));
+
                 sections.forEach((sec, idx) => {
-                    const text = sec.content || '';
+                    const text = (sec.id === activeSectionId) ? localText : (sec.content || '');
+                    
+                    // ABNT: Capa (idx 0) não conta. Folha de Rosto (idx 1) é a página 1.
+                    if (idx >= titlePageIndex) {
+                        globalCounter++;
+                    }
+
                     if (sec.type === 'cover' || sec.type === 'title_page') {
-                        if (idx >= titlePageIndex) globalCounter++;
-                        results.push({ ...sec, pageNumber: globalCounter, showNumber: false, isFirst: true });
+                        results.push({ 
+                            ...sec, 
+                            pageNumber: globalCounter, 
+                            showNumber: false, // Nunca mostra número na Folha de Rosto
+                            isFirst: true,
+                            content: text 
+                        });
                     } else {
-                        const pages = Math.max(1, Math.ceil(text.length / 2100));
-                        if (idx >= titlePageIndex) globalCounter++;
-                        for (let p = 0; p < pages; p++) {
+                        const charsPerPage = 2100;
+                        const pagesCount = Math.max(1, Math.ceil(text.length / charsPerPage));
+                        
+                        for (let p = 0; p < pagesCount; p++) {
                             results.push({
                                 ...sec,
                                 id: `${sec.id}-${p}`,
-                                content: text.substring(p * 2100, (p + 1) * 2100),
+                                sectionId: sec.id,
+                                content: text.substring(p * charsPerPage, (p + 1) * charsPerPage),
                                 pageNumber: globalCounter,
-                                showNumber: (sec.type === 'textual' || sec.type === 'references'),
+                                // MOSTRA NÚMERO: Apenas se for a Introdução ou posterior
+                                showNumber: idx >= introIndex,
                                 isFirst: p === 0
                             });
-                            if (p < pages - 1 && idx >= titlePageIndex) globalCounter++;
+                            
+                            // Incrementa se houver páginas extras dentro da mesma secção
+                            if (p < pagesCount - 1 && idx >= titlePageIndex) {
+                                globalCounter++;
+                            }
                         }
                     }
                 });
@@ -281,13 +306,18 @@
                 setIsGeneratingPdf(true);
                 const portal = document.getElementById('print-container');
                 portal.innerHTML = '';
-                const pages = all ? allPagesData : allPagesData.filter(p => p.id === activeSectionId);
+                const pages = all ? allPagesData : allPagesData.filter(p => p.id === activeSectionId || p.sectionId === activeSectionId);
+                
                 pages.forEach(p => {
                     const container = document.createElement('div');
                     portal.appendChild(container);
                     ReactDOM.createRoot(container).render(<PageRenderer page={p} isPrint={true} />);
                 });
-                setTimeout(() => { setIsGeneratingPdf(false); window.print(); }, 1200);
+
+                setTimeout(() => { 
+                    setIsGeneratingPdf(false); 
+                    window.print(); 
+                }, 1200);
             };
 
             return (
@@ -295,7 +325,7 @@
                     {isGeneratingPdf && (
                         <div className="fixed inset-0 z-[500] bg-slate-900/90 flex flex-col items-center justify-center text-white">
                             <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                            <h2 className="font-black uppercase tracking-widest text-sm">Gerando PDF</h2>
+                            <h2 className="font-black uppercase tracking-widest text-sm text-center">Configurando Paginação ABNT v26<br/><span className="text-[10px] opacity-60 font-normal">Contando desde a Folha de Rosto...</span></h2>
                         </div>
                     )}
 
@@ -303,9 +333,9 @@
                         <aside className="w-80 bg-slate-900 text-white flex flex-col shadow-2xl z-30">
                             <div className="p-6 bg-slate-950 border-b border-slate-800 flex items-center gap-3">
                                 <div className="bg-blue-600 p-2 rounded-xl shadow-lg text-white">
-                                    <i data-lucide="users" className="w-5 h-5"></i>
+                                    <i data-lucide="book-marked" className="w-5 h-5"></i>
                                 </div>
-                                <div><h1 className="font-black italic uppercase tracking-tighter text-lg leading-none">Lex ABNT</h1><p className="text-[8px] text-slate-500 font-bold uppercase mt-1">Group Work v24</p></div>
+                                <div><h1 className="font-black italic uppercase tracking-tighter text-lg leading-none">Lex ABNT</h1><p className="text-[8px] text-slate-500 font-bold uppercase mt-1">Rule v26</p></div>
                             </div>
                             
                             <div className="flex-1 overflow-y-auto custom-scroll p-4 space-y-1">
@@ -329,7 +359,7 @@
                                     <button onClick={() => setViewMode('preview')} className={`px-6 py-2 rounded-lg text-[10px] font-black tracking-widest transition-all ${viewMode === 'preview' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}>VER FOLHAS</button>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <button onClick={() => handleExportPdf(true)} className="bg-blue-600 text-white px-6 py-2.5 rounded-xl text-[10px] font-bold uppercase hover:bg-blue-700 shadow-lg flex items-center gap-2 active:scale-95"><i data-lucide="file-check" className="w-4 h-4"></i> PDF COMPLETO</button>
+                                    <button onClick={() => handleExportPdf(true)} className="bg-blue-600 text-white px-6 py-2.5 rounded-xl text-[10px] font-bold uppercase hover:bg-blue-700 shadow-lg flex items-center gap-2 active:scale-95"><i data-lucide="printer" className="w-4 h-4"></i> PDF COMPLETO</button>
                                 </div>
                             </header>
 
